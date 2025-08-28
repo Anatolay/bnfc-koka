@@ -4,6 +4,7 @@ module BNFC.Backend.Koka.CFtoKokaAST where
 import BNFC.CF
 import Data.List (intercalate)
 import BNFC.Backend.Common.NamedVariables
+import BNFC.Backend.Koka.Common
 
 mkAstFile :: CF -> String
 mkAstFile cf = unlines $ concat
@@ -13,12 +14,20 @@ mkAstFile cf = unlines $ concat
     , ""
     ]
 
+  , [ "/* User-defined tokens */"]
+  , map printToken userTokens
+
+  , [ ""
+    , "/* The abstract syntax */"
+    , ""
+    ]
   , map printData $ filter (not . isList . fst) datas
 
-  , []
   ]
   where
     moduleName = "ast" -- TODO!
+    userTokens = tokenNames cf
+    printToken tk = "pub struct " ++ firstLowerCase tk ++ "(string : string)"
     datas :: [Data]
     datas = getAbstractSyntax cf
 
@@ -26,7 +35,7 @@ printData :: Data -> String
 printData (cat, rules)
   | isList cat = ""
   | otherwise = unlines $ concat
-    [ [ "pub type " ++ firstLowerCase (identCat cat) ]
+    [ [ "pub type " ++ escapeKeywords (firstLowerCase (identCat cat)) ]
 
     , map printRule rules
 
@@ -52,22 +61,19 @@ printField (con, num)
   = printFieldName (con, num) ++ " : " ++ printFieldType con
 
 
-dropList :: String -> (Bool, String)
-dropList ('L' : 'i' : 's' : 't' : s) = (True, s)
-dropList s = (False, s)
-
 printFieldName :: IVar -> String
 printFieldName (s, num)
-  | num == 0 = typ
-  | otherwise = typ ++ "_" ++ show num
+  | num == 0 = fieldname
+  | otherwise = fieldname ++ "_" ++ show num
   where
-    typ = firstLowerCase typRaw
-    (_, typRaw) = dropList s
+    fieldname = if isList then fieldnameRaw ++ "List" else fieldnameRaw
+    fieldnameRaw = escapeKeywords (firstLowerCase typRaw)
+    (isList, typRaw) = dropList s
 
 printFieldType :: String -> String
 printFieldType s
   | isList = "list<" ++ typ ++ ">"
   | otherwise = typ
   where
-    typ = firstLowerCase typRaw
+    typ = escapeKeywords (firstLowerCase typRaw)
     (isList, typRaw) = dropList s

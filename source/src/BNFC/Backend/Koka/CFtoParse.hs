@@ -6,6 +6,7 @@ import Data.List (nub, intercalate)
 import BNFC.CF
 import BNFC.Utils
 import BNFC.Backend.Common.NamedVariables
+import BNFC.Backend.Koka.Common (escapeKeywords, escapeKeywordsDouble)
 
 
 -- | Generate parser files: .kk and .c
@@ -32,13 +33,13 @@ mkKokaParse cf = unlines $ concat
     syntaxModuleName = "ast" -- TODO!
     handleEntrypoint :: Cat -> [String]
     handleEntrypoint cat =
-      [ "pub extern parse-" ++ funName ++ "(str : string) : maybe<" ++ returnType ++ ">"
+      [ "pub extern parse" ++ funName ++ "(str : string) : maybe<" ++ returnType ++ ">"
       , "  c \"kk_parse_" ++ identCat cat ++ "\""
       , ""
       ]
       where
         (isList, typ) = dropList (identCat cat)
-        kokaType = firstLowerCase typ
+        kokaType = escapeKeywords . firstLowerCase . identCat . normCatOfList $ cat
         returnType = if isList then "list<" ++ kokaType ++ ">" else kokaType
         funName = if isList then typ ++ "List" else typ
 
@@ -81,13 +82,16 @@ mkFfiParse cf = unlines $ concat
     , ""
     ]
 
-  -- Declare all conversion functions
   , [ "/* ************** Declarations ************ */" ]
+  -- Declare conversion functions for user-defined tokens
+  , map printToken userTokens
+  -- Declare other conversion functions
   , map (printDecl prefix) classes
   , [ "", "" ]
 
   -- Generate all conversion functions
   , [ "/* ************** Convert C AST into Koka AST ************ */" ]
+  , concatMap convertToken userTokens
   , map (printConversionFun prefix) datas
 
   -- Handle entrypoints
@@ -99,6 +103,14 @@ mkFfiParse cf = unlines $ concat
     prefix = intercalate "_" ("kk" : path) ++ "__"
     kkIdentType = prefix ++ "ident"
     kkIdentCon = prefix ++ "new_Ident"
+    userTokens = tokenNames cf
+    printToken tk = prefix ++ firstLowerCase tk ++ " convert_" ++ tk ++ "(" ++ tk +++ firstLowerCase tk ++ ", kk_context_t* _ctx);"
+    convertToken tk =
+      [ prefix ++ firstLowerCase tk ++ " convert_" ++ tk ++ "(" ++ tk +++ firstLowerCase tk ++ ", kk_context_t* _ctx) {"
+      , "  kk_string_t str = chars_to_string(" ++ firstLowerCase tk ++", _ctx);"
+      , "  return " ++ prefix ++ "new_" ++ tk ++ "(str, _ctx);"
+      , "}"
+      ]
     datas :: [Data]
     datas = getAbstractSyntax cf
     classes :: [String]
@@ -120,7 +132,7 @@ mkFfiParse cf = unlines $ concat
       ]
       where
         (isList, typ) = dropList (identCat (normCat cat))
-        kokaType = firstLowerCase typ
+        kokaType = escapeKeywordsDouble (firstLowerCase typ)
         returnType = if isList then "kk_std_core_types__list" else prefix ++ kokaType
         boxFun = if isList then "kk_std_core_types__list_box" else prefix ++ kokaType ++ "_box"
 
@@ -128,7 +140,7 @@ mkSignature :: String -> String -> String
 mkSignature prefix cType = returnType +++ "convert_" ++ cType ++ "(" ++ cType +++ firstLowerCase cType ++ ", kk_context_t* _ctx)"
   where
     (isList, typ) = dropList cType
-    kokaType = firstLowerCase typ
+    kokaType = escapeKeywordsDouble (firstLowerCase typ)
     returnType = if isList then "kk_std_core_types__list" else prefix ++ kokaType
 
 printDecl :: String -> String -> String
@@ -140,8 +152,8 @@ printConversionFun prefix (cat, rules)
     [ mkSignature prefix cType ++ " {"
     , "  if (" ++ cVar ++ ") {"
     , "    " ++ wrappedType +++ wrappedVaR ++ " = " ++ cVar ++ "->" ++ varName wrappedType ++ ";"
-    , "    " ++ prefix ++ wrappedVaR ++ " k1 = " ++ "convert_" ++ wrappedType ++ "(" ++ wrappedVaR ++ ", _ctx);"
-    , "    kk_box_t k2 = " ++ prefix ++ wrappedVaR ++ "_box(k1, _ctx);"
+    , "    " ++ prefix ++ escapeKeywordsDouble wrappedVaR ++ " k1 = " ++ "convert_" ++ wrappedType ++ "(" ++ wrappedVaR ++ ", _ctx);"
+    , "    kk_box_t k2 = " ++ prefix ++ escapeKeywordsDouble wrappedVaR ++ "_box(k1, _ctx);"
     , "    " ++ cVar ++ " = " ++ cVar ++ "->" ++ varName cType ++ ";"
     , "    kk_std_core_types__list k3 = convert_" ++ cType ++"(" ++ cVar ++ ", _ctx);"
     , "    return kk_std_core_types__new_Cons(kk_reuse_null, 0, k2, k3, _ctx);"
@@ -208,7 +220,7 @@ printConversionFun prefix (cat, rules)
             kokaArgType
               | isList = "kk_std_core_types__list"
               | isInteger = "kk_integer_t"
-              | otherwise = prefix ++ firstLowerCase cArgType
+              | otherwise = prefix ++ escapeKeywordsDouble (firstLowerCase cArgType)
 
 getPath :: CF -> [String]
 getPath _cf = ["ast"] -- TODO
