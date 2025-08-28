@@ -277,6 +277,11 @@ library
     BNFC.Backend.TreeSitter.CFtoTreeSitter
     BNFC.Backend.TreeSitter.RegToJSReg
 
+    -- Koka backend
+    BNFC.Backend.Koka
+    BNFC.Backend.Koka.CFtoKokaAST
+    BNFC.Backend.Koka.CFtoParse
+
 ----- Testing --------------------------------------------------------------
 
 test-suite unit-tests

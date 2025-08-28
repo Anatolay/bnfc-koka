@@ -64,6 +64,7 @@ data Target = TargetC | TargetCpp | TargetCppNoStl
             | TargetHaskell | TargetHaskellGadt | TargetLatex
             | TargetJava | TargetOCaml | TargetPygments
             | TargetTreeSitter
+            | TargetKoka
             | TargetCheck
   deriving (Eq, Bounded, Enum, Ord)
 
@@ -82,6 +83,7 @@ instance Show Target where
   show TargetOCaml        = "OCaml"
   show TargetPygments     = "Pygments"
   show TargetTreeSitter   = "Tree-sitter"
+  show TargetKoka         = "Koka"
   show TargetCheck        = "Check LBNF file"
 
 -- | Which version of Alex is targeted?
@@ -261,6 +263,7 @@ printTargetOption = ("--" ++) . \case
   TargetOCaml       -> "ocaml"
   TargetPygments    -> "pygments"
   TargetTreeSitter  -> "tree-sitter"
+  TargetKoka        -> "koka"
   TargetCheck       -> "check"
 
 printAlexOption :: AlexVersion -> String
@@ -314,6 +317,8 @@ targetOptions =
     "Output a Python lexer for Pygments"
   , Option "" ["tree-sitter"]   (NoArg (\o -> o {target = TargetTreeSitter}))
     "Output grammar.js file for use with tree-sitter"
+  , Option "" ["koka"]          (NoArg (\o -> o {target = TargetKoka}))
+    "Output Koka and C code for use with FLex and Bison"
   , Option "" ["check"]         (NoArg (\ o -> o{target = TargetCheck }))
     "No output. Just check input LBNF file"
   ]
@@ -530,6 +535,7 @@ instance Maintained Target where
     TargetOCaml       -> True
     TargetPygments    -> True
     TargetTreeSitter  -> True
+    TargetKoka        -> False
     TargetCheck       -> True
 
 instance Maintained AlexVersion where
