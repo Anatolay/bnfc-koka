@@ -5,9 +5,10 @@ import BNFC.CF
 import Data.List (intercalate)
 import BNFC.Backend.Common.NamedVariables
 import BNFC.Backend.Koka.Common
+import BNFC.Options
 
-mkAstFile :: CF -> String
-mkAstFile cf = unlines $ concat
+mkAstFile :: SharedOptions -> CF -> String
+mkAstFile opts cf = unlines $ concat
   [ [ "module " ++ moduleName
     , ""
     , "pub struct ident(string : string)"
@@ -25,7 +26,9 @@ mkAstFile cf = unlines $ concat
 
   ]
   where
-    moduleName = "ast" -- TODO!
+    moduleName = case inPackage opts of
+      Nothing -> "ast"
+      Just package -> package ++ "/" ++ "ast"
     userTokens = tokenNames cf
     printToken tk = "pub struct " ++ firstLowerCase tk ++ "(string : string)"
     datas :: [Data]

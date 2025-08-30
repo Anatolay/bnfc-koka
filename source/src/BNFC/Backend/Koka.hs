@@ -5,8 +5,6 @@ import qualified BNFC.Backend.C as C
 import BNFC.Backend.Base
 import BNFC.CF
 import BNFC.Options
-import BNFC.PrettyPrint
-import BNFC.Utils
 
 import BNFC.Backend.Koka.CFtoKokaAST
 import BNFC.Backend.Koka.CFtoParse
@@ -14,11 +12,11 @@ import BNFC.Backend.Koka.CFtoParse
 makeKoka :: SharedOptions -> CF -> MkFiles ()
 makeKoka opts cf = do
   C.makeC opts cf
-  mkKokaFile "ast.kk" (mkAstFile cf)
+  mkKokaFile "ast.kk" (mkAstFile opts cf)
   mkKokaFile "parse.kk" kkParseFile
   mkCFile "parse.c" cParseFile
   where
-    (kkParseFile, cParseFile) = mkParse cf
+    (kkParseFile, cParseFile) = mkParse opts cf
 
 -- makefile :: Doc
 -- makefile = C.makefile undefined undefined undefined

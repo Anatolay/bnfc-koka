@@ -7,14 +7,15 @@ import BNFC.CF
 import BNFC.Utils
 import BNFC.Backend.Common.NamedVariables
 import BNFC.Backend.Koka.Common (escapeKeywords, escapeKeywordsDouble)
+import BNFC.Options
 
 
 -- | Generate parser files: .kk and .c
-mkParse :: CF -> (String, String)
-mkParse cf = (mkKokaParse cf, mkFfiParse cf)
+mkParse :: SharedOptions -> CF -> (String, String)
+mkParse opts cf = (mkKokaParse opts cf, mkFfiParse cf)
 
-mkKokaParse :: CF -> String
-mkKokaParse cf = unlines $ concat
+mkKokaParse :: SharedOptions -> CF -> String
+mkKokaParse opts cf = unlines $ concat
   [ [ "module " ++ moduleName
     , ""
     , "import " ++ syntaxModuleName
@@ -29,8 +30,9 @@ mkKokaParse cf = unlines $ concat
     , []
   ]
   where
-    moduleName = "parse" -- TODO!
-    syntaxModuleName = "ast" -- TODO!
+    package = maybe "" (++ "/") (inPackage opts)
+    moduleName = package ++ "parse"
+    syntaxModuleName = package ++ "ast"
     handleEntrypoint :: Cat -> [String]
     handleEntrypoint cat =
       [ "pub extern parse" ++ funName ++ "(str : string) : maybe<" ++ returnType ++ ">"

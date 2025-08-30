@@ -339,7 +339,7 @@ specificOptions =
   , ( Option ['p'] ["name-space"]
       (ReqArg (\n o -> o {inPackage = Just n}) "NAMESPACE")
           "Prepend NAMESPACE to the package/module name"
-    , [TargetCpp, TargetJava] ++ haskellTargets)
+    , [TargetCpp, TargetJava, TargetKoka] ++ haskellTargets)
   -- Java backend:
   , ( Option [] ["jlex"  ] (NoArg (\o -> o {javaLexerParser = JLexCup}))
           "Lex with JLex, parse with CUP (default)"
