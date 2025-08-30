@@ -12,7 +12,7 @@ import BNFC.Options
 
 -- | Generate parser files: .kk and .c
 mkParse :: SharedOptions -> CF -> (String, String)
-mkParse opts cf = (mkKokaParse opts cf, mkFfiParse cf)
+mkParse opts cf = (mkKokaParse opts cf, mkFfiParse opts cf)
 
 mkKokaParse :: SharedOptions -> CF -> String
 mkKokaParse opts cf = unlines $ concat
@@ -46,8 +46,8 @@ mkKokaParse opts cf = unlines $ concat
         funName = if isList then typ ++ "List" else typ
 
 
-mkFfiParse :: CF -> String
-mkFfiParse cf = unlines $ concat
+mkFfiParse :: SharedOptions -> CF -> String
+mkFfiParse opts cf = unlines $ concat
   [ [ "#include \"Parser.h\""
     , "#include \"Printer.h\""
     , "#include \"Absyn.h\""
@@ -101,8 +101,8 @@ mkFfiParse cf = unlines $ concat
   , concatMap handleEntrypoint (allEntryPoints cf)
   ]
   where
-    path = getPath cf
-    prefix = intercalate "_" ("kk" : path) ++ "__"
+    path = maybe "ast" (++ "/ast") (inPackage opts)
+    prefix = intercalate "_" ("kk" : path `splitBy` '/') ++ "__"
     kkIdentType = prefix ++ "ident"
     kkIdentCon = prefix ++ "new_Ident"
     userTokens = tokenNames cf
@@ -224,9 +224,17 @@ printConversionFun prefix (cat, rules)
               | isInteger = "kk_integer_t"
               | otherwise = prefix ++ escapeKeywordsDouble (firstLowerCase cArgType)
 
-getPath :: CF -> [String]
-getPath _cf = ["ast"] -- TODO
-
 dropList :: String -> (Bool, String)
 dropList ('L' : 'i' : 's' : 't' : s) = (True, s)
 dropList s = (False, s)
+
+splitBy :: String -> Char -> [String]
+splitBy str delim = go [] str
+  where
+    ap x [] = [[x]]
+    ap x (xs:xss) = (x:xs) : xss
+
+    go acc [] = reverse $ fmap reverse acc
+    go acc (c:str)
+      | c == delim = go ([]:acc) str
+      | otherwise = go (ap c acc) str
