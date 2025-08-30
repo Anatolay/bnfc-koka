@@ -535,7 +535,7 @@ instance Maintained Target where
     TargetOCaml       -> True
     TargetPygments    -> True
     TargetTreeSitter  -> True
-    TargetKoka        -> False
+    TargetKoka        -> True
     TargetCheck       -> True
 
 instance Maintained AlexVersion where
